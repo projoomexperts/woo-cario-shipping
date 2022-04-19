@@ -2,6 +2,16 @@
 
 /**
  * Plugin Name: Woocommerce Cario Shipping
+ * Plugin URI:        https://freelancer.com/u/projoomexperts
+ * Description:       Woocommerce shipping plugin for cario including handling charge and uplift
+ * Version:           1.10.3
+ * Requires at least: 5.2
+ * Requires PHP:      7.2
+ * Author:            ProJoomExperts
+ * Author URI:        https://freelancer.com/u/projoomexperts
+ * License:           GPL v2 or later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain:       cario
  */
 
 /* 
@@ -19,16 +29,21 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 
+/*
+
 // Scheduled Action Hook
 function woo_cario_authentication_generate( ) {
 
-	$url = 'https://integrate.cario.com.au/api/Authentication/Login';
+	
 
 	$woocommerce_cario_shipping_options = get_option('woocommerce_cario_settings');
+	$apiUrl = $woocommerce_cario_shipping_options['apiUrl'];
 	$usernameoremailaddress = $woocommerce_cario_shipping_options['userNameOrEmailAddress'];
 	$password = $woocommerce_cario_shipping_options['password'];
 	$tenantname = $woocommerce_cario_shipping_options['tenantName'];
 	$rememberclient = true;
+
+	$url = $apiUrl . '/api/Authentication/Login';
 
 	$response = wp_remote_post( $url, array(
 		'method'      => 'POST',
@@ -48,6 +63,11 @@ function woo_cario_authentication_generate( ) {
 		'cookies'     => array()
 		)
 	);
+
+	
+
+	pj_var_dump($response);
+
 	 
 	if ( is_wp_error( $response ) ) {
 		$error_message = $response->get_error_message();
@@ -68,18 +88,20 @@ function woo_cario_authentication() {
 add_action( 'wp', 'woo_cario_authentication' );
 
 
+*/
+
+
 // Add Shortcode
 function fn_woo_cario_test() {
 
-	$data = get_option('woocommerce_cario_settings');
-	echo '<pre>';
-	var_dump($data);
-	echo '</pre>';
-
-	// echo print_r( get_option('woo_cario_auth_data')['accessToken']);
+	woo_cario_authentication_generate();
 
 }
 add_shortcode( 'woo_cario_test', 'fn_woo_cario_test' );
+
+
+
+
 
 
 if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
@@ -108,20 +130,20 @@ function cario_shipping_method() {
 
 				$this->enabled = isset( $this->settings['enabled'] ) ? $this->settings['enabled'] : 'yes';
 				$this->title = isset( $this->settings['title'] ) ? $this->settings['title'] : __( 'Cario Shipping', 'cario' );
-				$this->userNameOrEmailAddress = isset( $this->settings['userNameOrEmailAddress'] ) ? $this->settings['userNameOrEmailAddress'] : __( 'APIUser', 'cario' );
-				$this->password = isset( $this->settings['password'] ) ? $this->settings['password'] : __( 'CarioAPItest', 'cario' );
-				$this->tenantName = isset( $this->settings['tenantName'] ) ? $this->settings['tenantName'] : __( 'TEST', 'cario' );
-				$this->uplift = isset( $this->settings['uplift'] ) ? $this->settings['uplift'] : __( '0', 'cario' );
-
-
+				$this->accessToken = isset( $this->settings['accessToken'] ) ? $this->settings['accessToken'] : __( '', 'cario' );
+				$this->customerId = isset( $this->settings['customerId'] ) ? $this->settings['customerId'] : __( '', 'cario' );
+				$this->tenantId = isset( $this->settings['tenantId'] ) ? $this->settings['tenantId'] : __( '', 'cario' );
 
 				$this->uplift = isset( $this->settings['uplift'] ) ? $this->settings['uplift'] : __( '5', 'cario' );
+				$this->handlingCharge = isset( $this->settings['handlingCharge'] ) ? $this->settings['handlingCharge'] : __( '20', 'cario' );
+
 				$this->storeCompany = isset( $this->settings['storeCompany'] ) ? $this->settings['storeCompany'] : __( '', 'cario' );
 				$this->storeAddress = isset( $this->settings['storeAddress'] ) ? $this->settings['storeAddress'] : __( '', 'cario' );
 				$this->storeCity = isset( $this->settings['storeCity'] ) ? $this->settings['storeCity'] : __( '', 'cario' );
 				$this->storeState = isset( $this->settings['storeState'] ) ? $this->settings['storeState'] : __( '', 'cario' );
 				$this->storePostCode = isset( $this->settings['storePostCode'] ) ? $this->settings['storePostCode'] : __( '', 'cario' );
 				$this->storeCountry = isset( $this->settings['storeCountry'] ) ? $this->settings['storeCountry'] : __( '', 'cario' );
+
 
 
 
@@ -140,6 +162,7 @@ function cario_shipping_method() {
 
 				// Save settings in admin if you have any defined
 				add_action( 'woocommerce_update_options_shipping_' . $this->id, array( $this, 'process_admin_options' ) );
+				//add_action('woocommerce_update_options_shipping_' . $this->id, 'woo_cario_authentication_generate', 99);
 			}
 
 			/**
@@ -147,6 +170,8 @@ function cario_shipping_method() {
 			 * @return void 
 			 */
 			function init_form_fields() { 
+
+				$symbol = get_woocommerce_currency();
 
 				$this->form_fields = array(
 
@@ -164,6 +189,17 @@ function cario_shipping_method() {
 						'default' => __( 'Cario Shipping', 'cario' )
 					),
 
+
+					/*
+
+					'apiUrl' => array(
+						'title' => __( 'API URL', 'cario' ),
+						'type' => 'text',
+						'description' => __( 'Only Domain Name With HTTPS:// ,  No extra / at the end', 'cario' ),
+						'default' => __( 'https://integrate.cario.com.au', 'cario' )
+					),
+					
+					
 					'userNameOrEmailAddress' => array(
 						'title' => __( 'Username / Email Address', 'cario' ),
 						'type' => 'text',
@@ -185,17 +221,40 @@ function cario_shipping_method() {
 						'default' => __( 'TEST', 'cario' )
 					),
 
-					'handlingCharge' => array(
-						'title' => __( '<a target="_blank" href="'. site_url('/wp-admin/admin.php?page=cario_shipping_rules') .'">Handling Charge</a>', 'cario' ),
-						'type' => 'title',
+					*/
+
+					'accessToken' => array(
+						'title' => __( 'Access Token', 'cario' ),
+						'type' => 'textarea',
+						'description' => __( 'Production token that you get from cario support', 'cario' ),
+						'default' => __( '', 'cario' )
+					),
+
+					'tenantId' => array(
+						'title' => __( 'Tenant ID', 'cario' ),
+						'type' => 'text',
 						'description' => __( '', 'cario' ),
-						'default' => ''
+						'default' => __( '', 'cario' )
+					),
+
+					'customerId' => array(
+						'title' => __( 'Customer ID', 'cario' ),
+						'type' => 'text',
+						'description' => __( '', 'cario' ),
+						'default' => __( '', 'cario' )
+					),
+
+					'handlingCharge' => array(
+						'title' => __( 'Default Handling Charge', 'cario' ),
+						'type' => 'number',
+						'description' => __( 'In '. $symbol .' - Check <a target="_blank" href="'. site_url('/wp-admin/admin.php?page=cario_shipping_rules') .'">Weight Based Handling Charges</a>', 'cario' ),
+						'default' => '20'
 					),
 
 					'uplift' => array(
-						'title' => __( 'Uplift Amount', 'cario' ),
+						'title' => __( 'Uplift (%)', 'cario' ),
 						'type' => 'number',
-						'description' => __( 'percentage ( % )', 'cario' ),
+						'description' => __( 'In Percentage', 'cario' ),
 						'default' => __( '5', 'cario' )
 					),
 
@@ -265,90 +324,106 @@ function cario_shipping_method() {
 				$cost = 0;
 				$qty = 0;
 				$cart_prods_m3 = array();
+				$cart_prod_id_m3 = array();
 
 				foreach ( $package['contents'] as $item_id => $values ) 
 				{ 
-					$_product = $values['data']; 
-					if( $_product->get_weight() ){
-						$weight = $weight + $_product->get_weight() * $values['quantity'];
-					}
-					$qty += $values['quantity'];
-					if( $_product->get_length() && $_product->get_width() && $_product->get_height()){
-						$prod_m3 = $_product->get_length() * $_product->get_width() * $_product->get_height();
-						$prod_m3 = ($prod_m3 * $values['quantity']) / 1000000;
-						array_push($cart_prods_m3, $prod_m3);
+					$_product = $values['data'];
+					if( $_product){
+						if( $_product->get_weight() ){
+							$weight = $weight + $_product->get_weight() * $values['quantity'];
+						}
+						$qty += $values['quantity'];
+						if( $_product->get_length() !== null && $_product->get_width() !== null && $_product->get_height() !== null ){
+							$prod_m3 = $_product->get_length() * $_product->get_width() * $_product->get_height();
+							$prod_m3 = ( $prod_m3 / 1000000 ) * $values['quantity'] ;
+							$cart_prod_id_m3[$prod_m3] = $item_id ;
+							array_push($cart_prods_m3, $prod_m3);
+						}
 					}
 				}
 
 				$volume = array_sum($cart_prods_m3);
 
+				$largest_key = max(array_keys($cart_prod_id_m3));
+				$largest_product_key = $cart_prod_id_m3[$largest_key];
+				$largest_product = $package['contents'][$largest_product_key]['data'];
+				$largest_product_length = $largest_product->get_length();
+				$largest_product_width = $largest_product->get_width();
+				$largest_product_height = $largest_product->get_height();
+
 				$weight = wc_get_weight( $weight, 'kg' );
 
+				$store_company = $this->storeCompany;
+				$store_address = $this->storeAddress;
+				$store_city = $this->storeCity;
+				$store_postcode = $this->storePostCode;
+				$store_state = $this->storeState;
+				$store_country = $this->storeCountry;
+				
+				$store_country_arr = $this->cario_get_country_id($store_country);
 
-				$iso3=array('BD'=>'BGD','BE'=>'BEL','BF'=>'BFA','BG'=>'BGR','BA'=>'BIH','BB'=>'BRB','WF'=>'WLF','BL'=>'BLM','BM'=>'BMU','BN'=>'BRN','BO'=>'BOL','BH'=>'BHR','BI'=>'BDI','BJ'=>'BEN','BT'=>'BTN','JM'=>'JAM','BV'=>'BVT','BW'=>'BWA','WS'=>'WSM','BQ'=>'BES','BR'=>'BRA','BS'=>'BHS','JE'=>'JEY','BY'=>'BLR','BZ'=>'BLZ','RU'=>'RUS','RW'=>'RWA','RS'=>'SRB','TL'=>'TLS','RE'=>'REU','TM'=>'TKM','TJ'=>'TJK','RO'=>'ROU','TK'=>'TKL','GW'=>'GNB','GU'=>'GUM','GT'=>'GTM','GS'=>'SGS','GR'=>'GRC','GQ'=>'GNQ','GP'=>'GLP','JP'=>'JPN','GY'=>'GUY','GG'=>'GGY','GF'=>'GUF','GE'=>'GEO','GD'=>'GRD','GB'=>'GBR','GA'=>'GAB','SV'=>'SLV','GN'=>'GIN','GM'=>'GMB','GL'=>'GRL','GI'=>'GIB','GH'=>'GHA','OM'=>'OMN','TN'=>'TUN','JO'=>'JOR','HR'=>'HRV','HT'=>'HTI','HU'=>'HUN','HK'=>'HKG','HN'=>'HND','HM'=>'HMD','VE'=>'VEN','PR'=>'PRI','PS'=>'PSE','PW'=>'PLW','PT'=>'PRT','SJ'=>'SJM','PY'=>'PRY','IQ'=>'IRQ','PA'=>'PAN','PF'=>'PYF','PG'=>'PNG','PE'=>'PER','PK'=>'PAK','PH'=>'PHL','PN'=>'PCN','PL'=>'POL','PM'=>'SPM','ZM'=>'ZMB','EH'=>'ESH','EE'=>'EST','EG'=>'EGY','ZA'=>'ZAF','EC'=>'ECU','IT'=>'ITA','VN'=>'VNM','SB'=>'SLB','ET'=>'ETH','SO'=>'SOM','ZW'=>'ZWE','SA'=>'SAU','ES'=>'ESP','ER'=>'ERI','ME'=>'MNE','MD'=>'MDA','MG'=>'MDG','MF'=>'MAF','MA'=>'MAR','MC'=>'MCO','UZ'=>'UZB','MM'=>'MMR','ML'=>'MLI','MO'=>'MAC','MN'=>'MNG','MH'=>'MHL','MK'=>'MKD','MU'=>'MUS','MT'=>'MLT','MW'=>'MWI','MV'=>'MDV','MQ'=>'MTQ','MP'=>'MNP','MS'=>'MSR','MR'=>'MRT','IM'=>'IMN','UG'=>'UGA','TZ'=>'TZA','MY'=>'MYS','MX'=>'MEX','IL'=>'ISR','FR'=>'FRA','IO'=>'IOT','SH'=>'SHN','FI'=>'FIN','FJ'=>'FJI','FK'=>'FLK','FM'=>'FSM','FO'=>'FRO','NI'=>'NIC','NL'=>'NLD','NO'=>'NOR','NA'=>'NAM','VU'=>'VUT','NC'=>'NCL','NE'=>'NER','NF'=>'NFK','NG'=>'NGA','NZ'=>'NZL','NP'=>'NPL','NR'=>'NRU','NU'=>'NIU','CK'=>'COK','XK'=>'XKX','CI'=>'CIV','CH'=>'CHE','CO'=>'COL','CN'=>'CHN','CM'=>'CMR','CL'=>'CHL','CC'=>'CCK','CA'=>'CAN','CG'=>'COG','CF'=>'CAF','CD'=>'COD','CZ'=>'CZE','CY'=>'CYP','CX'=>'CXR','CR'=>'CRI','CW'=>'CUW','CV'=>'CPV','CU'=>'CUB','SZ'=>'SWZ','SY'=>'SYR','SX'=>'SXM','KG'=>'KGZ','KE'=>'KEN','SS'=>'SSD','SR'=>'SUR','KI'=>'KIR','KH'=>'KHM','KN'=>'KNA','KM'=>'COM','ST'=>'STP','SK'=>'SVK','KR'=>'KOR','SI'=>'SVN','KP'=>'PRK','KW'=>'KWT','SN'=>'SEN','SM'=>'SMR','SL'=>'SLE','SC'=>'SYC','KZ'=>'KAZ','KY'=>'CYM','SG'=>'SGP','SE'=>'SWE','SD'=>'SDN','DO'=>'DOM','DM'=>'DMA','DJ'=>'DJI','DK'=>'DNK','VG'=>'VGB','DE'=>'DEU','YE'=>'YEM','DZ'=>'DZA','US'=>'USA','UY'=>'URY','YT'=>'MYT','UM'=>'UMI','LB'=>'LBN','LC'=>'LCA','LA'=>'LAO','TV'=>'TUV','TW'=>'TWN','TT'=>'TTO','TR'=>'TUR','LK'=>'LKA','LI'=>'LIE','LV'=>'LVA','TO'=>'TON','LT'=>'LTU','LU'=>'LUX','LR'=>'LBR','LS'=>'LSO','TH'=>'THA','TF'=>'ATF','TG'=>'TGO','TD'=>'TCD','TC'=>'TCA','LY'=>'LBY','VA'=>'VAT','VC'=>'VCT','AE'=>'ARE','AD'=>'AND','AG'=>'ATG','AF'=>'AFG','AI'=>'AIA','VI'=>'VIR','IS'=>'ISL','IR'=>'IRN','AM'=>'ARM','AL'=>'ALB','AO'=>'AGO','AQ'=>'ATA','AS'=>'ASM','AR'=>'ARG','AU'=>'AUS','AT'=>'AUT','AW'=>'ABW','IN'=>'IND','AX'=>'ALA','AZ'=>'AZE','IE'=>'IRL','ID'=>'IDN','UA'=>'UKR','QA'=>'QAT','MZ'=>'MOZ',);
-				$isofull=array('BD'=>'Bangladesh','BE'=>'Belgium','BF'=>'Burkina Faso','BG'=>'Bulgaria','BA'=>'Bosnia and Herzegovina','BB'=>'Barbados','WF'=>'Wallis and Futuna','BL'=>'Saint Barthelemy','BM'=>'Bermuda','BN'=>'Brunei','BO'=>'Bolivia','BH'=>'Bahrain','BI'=>'Burundi','BJ'=>'Benin','BT'=>'Bhutan','JM'=>'Jamaica','BV'=>'Bouvet Island','BW'=>'Botswana','WS'=>'Samoa','BQ'=>'Bonaire, Saint Eustatius and Saba ','BR'=>'Brazil','BS'=>'Bahamas','JE'=>'Jersey','BY'=>'Belarus','BZ'=>'Belize','RU'=>'Russia','RW'=>'Rwanda','RS'=>'Serbia','TL'=>'East Timor','RE'=>'Reunion','TM'=>'Turkmenistan','TJ'=>'Tajikistan','RO'=>'Romania','TK'=>'Tokelau','GW'=>'Guinea-Bissau','GU'=>'Guam','GT'=>'Guatemala','GS'=>'South Georgia and the South Sandwich Islands','GR'=>'Greece','GQ'=>'Equatorial Guinea','GP'=>'Guadeloupe','JP'=>'Japan','GY'=>'Guyana','GG'=>'Guernsey','GF'=>'French Guiana','GE'=>'Georgia','GD'=>'Grenada','GB'=>'United Kingdom','GA'=>'Gabon','SV'=>'El Salvador','GN'=>'Guinea','GM'=>'Gambia','GL'=>'Greenland','GI'=>'Gibraltar','GH'=>'Ghana','OM'=>'Oman','TN'=>'Tunisia','JO'=>'Jordan','HR'=>'Croatia','HT'=>'Haiti','HU'=>'Hungary','HK'=>'Hong Kong','HN'=>'Honduras','HM'=>'Heard Island and McDonald Islands','VE'=>'Venezuela','PR'=>'Puerto Rico','PS'=>'Palestinian Territory','PW'=>'Palau','PT'=>'Portugal','SJ'=>'Svalbard and Jan Mayen','PY'=>'Paraguay','IQ'=>'Iraq','PA'=>'Panama','PF'=>'French Polynesia','PG'=>'Papua New Guinea','PE'=>'Peru','PK'=>'Pakistan','PH'=>'Philippines','PN'=>'Pitcairn','PL'=>'Poland','PM'=>'Saint Pierre and Miquelon','ZM'=>'Zambia','EH'=>'Western Sahara','EE'=>'Estonia','EG'=>'Egypt','ZA'=>'South Africa','EC'=>'Ecuador','IT'=>'Italy','VN'=>'Vietnam','SB'=>'Solomon Islands','ET'=>'Ethiopia','SO'=>'Somalia','ZW'=>'Zimbabwe','SA'=>'Saudi Arabia','ES'=>'Spain','ER'=>'Eritrea','ME'=>'Montenegro','MD'=>'Moldova','MG'=>'Madagascar','MF'=>'Saint Martin','MA'=>'Morocco','MC'=>'Monaco','UZ'=>'Uzbekistan','MM'=>'Myanmar','ML'=>'Mali','MO'=>'Macao','MN'=>'Mongolia','MH'=>'Marshall Islands','MK'=>'Macedonia','MU'=>'Mauritius','MT'=>'Malta','MW'=>'Malawi','MV'=>'Maldives','MQ'=>'Martinique','MP'=>'Northern Mariana Islands','MS'=>'Montserrat','MR'=>'Mauritania','IM'=>'Isle of Man','UG'=>'Uganda','TZ'=>'Tanzania','MY'=>'Malaysia','MX'=>'Mexico','IL'=>'Israel','FR'=>'France','IO'=>'British Indian Ocean Territory','SH'=>'Saint Helena','FI'=>'Finland','FJ'=>'Fiji','FK'=>'Falkland Islands','FM'=>'Micronesia','FO'=>'Faroe Islands','NI'=>'Nicaragua','NL'=>'Netherlands','NO'=>'Norway','NA'=>'Namibia','VU'=>'Vanuatu','NC'=>'New Caledonia','NE'=>'Niger','NF'=>'Norfolk Island','NG'=>'Nigeria','NZ'=>'New Zealand','NP'=>'Nepal','NR'=>'Nauru','NU'=>'Niue','CK'=>'Cook Islands','XK'=>'Kosovo','CI'=>'Ivory Coast','CH'=>'Switzerland','CO'=>'Colombia','CN'=>'China','CM'=>'Cameroon','CL'=>'Chile','CC'=>'Cocos Islands','CA'=>'Canada','CG'=>'Republic of the Congo','CF'=>'Central African Republic','CD'=>'Democratic Republic of the Congo','CZ'=>'Czech Republic','CY'=>'Cyprus','CX'=>'Christmas Island','CR'=>'Costa Rica','CW'=>'Curacao','CV'=>'Cape Verde','CU'=>'Cuba','SZ'=>'Swaziland','SY'=>'Syria','SX'=>'Sint Maarten','KG'=>'Kyrgyzstan','KE'=>'Kenya','SS'=>'South Sudan','SR'=>'Suriname','KI'=>'Kiribati','KH'=>'Cambodia','KN'=>'Saint Kitts and Nevis','KM'=>'Comoros','ST'=>'Sao Tome and Principe','SK'=>'Slovakia','KR'=>'South Korea','SI'=>'Slovenia','KP'=>'North Korea','KW'=>'Kuwait','SN'=>'Senegal','SM'=>'San Marino','SL'=>'Sierra Leone','SC'=>'Seychelles','KZ'=>'Kazakhstan','KY'=>'Cayman Islands','SG'=>'Singapore','SE'=>'Sweden','SD'=>'Sudan','DO'=>'Dominican Republic','DM'=>'Dominica','DJ'=>'Djibouti','DK'=>'Denmark','VG'=>'British Virgin Islands','DE'=>'Germany','YE'=>'Yemen','DZ'=>'Algeria','US'=>'United States','UY'=>'Uruguay','YT'=>'Mayotte','UM'=>'United States Minor Outlying Islands','LB'=>'Lebanon','LC'=>'Saint Lucia','LA'=>'Laos','TV'=>'Tuvalu','TW'=>'Taiwan','TT'=>'Trinidad and Tobago','TR'=>'Turkey','LK'=>'Sri Lanka','LI'=>'Liechtenstein','LV'=>'Latvia','TO'=>'Tonga','LT'=>'Lithuania','LU'=>'Luxembourg','LR'=>'Liberia','LS'=>'Lesotho','TH'=>'Thailand','TF'=>'French Southern Territories','TG'=>'Togo','TD'=>'Chad','TC'=>'Turks and Caicos Islands','LY'=>'Libya','VA'=>'Vatican','VC'=>'Saint Vincent and the Grenadines','AE'=>'United Arab Emirates','AD'=>'Andorra','AG'=>'Antigua and Barbuda','AF'=>'Afghanistan','AI'=>'Anguilla','VI'=>'U.S. Virgin Islands','IS'=>'Iceland','IR'=>'Iran','AM'=>'Armenia','AL'=>'Albania','AO'=>'Angola','AQ'=>'Antarctica','AS'=>'American Samoa','AR'=>'Argentina','AU'=>'Australia','AT'=>'Austria','AW'=>'Aruba','IN'=>'India','AX'=>'Aland Islands','AZ'=>'Azerbaijan','IE'=>'Ireland','ID'=>'Indonesia','UA'=>'Ukraine','QA'=>'Qatar','MZ'=>'Mozambique',); 
+				$store_country_id = $store_country_arr['id'];
 
+				$store_location_id = $this->cario_get_location_id($store_country_id, $store_postcode, $store_city);
 
-				$store_address = WC()->countries->get_base_address();
-				$store_address .= WC()->countries->get_base_address_2();
-				$store_city = WC()->countries->get_base_city();
-				$store_postcode = WC()->countries->get_base_postcode();
-				$store_state = WC()->countries->get_base_state();
-				$store_country = WC()->countries->get_base_country();
-				$store_country_3 = $iso3[$store_country];
-				$store_country_full = strtoupper($isofull[$store_country]);
+				$customerId = $this->customerId;
+
+				//pj_var_dump($store_location_id);
+
+				
 				
 				$destination = $package["destination"];
+				$destination_address = $destination['address_1'] . ' ' . $destination['address_2'];
 				$destination_country = $destination['country'];
 				$destination_city = $destination['city'];
 				$destination_state = $destination['state'];
 				$destination_postcode = $destination['postcode'];
-				$destination_country_3 = $iso3[$destination_country];
-				$destination_country_full = strtoupper($isofull[$destination_country]);
 
-				$pickup_date =  date('Y-m-d', strtotime('+1 day'));
+				$destination_country_arr = $this->cario_get_country_id($destination_country);
+
+				$destination_country_id = $destination_country_arr['id'];
+
+				$destination_location_id = $this->cario_get_location_id( $destination_country_id , $destination_postcode, $destination_city);
+
+
+				
+
+				$pickup_date =  date('Y-m-d', strtotime('+2 day'));
+
+				//pj_var_dump($cart_prod_id_m3);
+
+				//pj_var_dump($package['contents']);
 				 
 
 
 				$data = array (
-					'customerId' => 4208,
+					'customerId' => intval($customerId),
 					'pickupDate' => $pickup_date,
 					'pickupAddress' => 
 					array (
-					  'name' => 'Quote',
-					  'line1' => 'Quote',
+					  'name' => $store_company,
+					  'line1' => $store_address,
 					  'location' => 
 					  array (
-						'id' => 8162,
+						'id' => $store_location_id,
 						'locality' => $store_city,
 						'state' => $store_state,
 						'postcode' => $store_postcode,
-						'country' => 
-						array (
-						  'id' => 36,
-						  'isO2' => $store_country,
-						  'isO3' => $store_country_3,
-						  'name' => $store_country_full,
-						),
+						'country' => $store_country_arr,
 					  ),
 					),
 					'deliveryAddress' => 
 					array (
 					  'name' => 'Quote',
-					  'line1' => 'Quote',
+					  'line1' => $destination_address,
 					  'location' => 
 					  array (
-						'id' => 2495,
+						'id' => $destination_location_id,
 						'locality' => $destination_city,
 						'state' => $destination_state,
 						'postcode' => $destination_postcode,
-						'country' => 
-						array (
-						  'id' => 36,
-						  'isO2' => $destination_country,
-						  'isO3' => $destination_country_3,
-						  'name' => $destination_country_full,
-						),
+						'country' => $destination_country_arr,
 					  ),
 					),
 					'totalItems' => $qty,
@@ -360,26 +435,27 @@ function cario_shipping_method() {
 					  array (
 						'transportUnitType' => 'Carton',
 						'quantity' => 1,
-						'length' => 20,
-						'width' => 20,
-						'height' => 20,
+						//'length' => $largest_product_length,
+						//'width' => $largest_product_width,
+						//'height' => $largest_product_height,
 						'volume' => $volume,
 						'weight' => $weight,
 					  ),
 					),
 				);
 
-				// pj_var_dump($package);
+				//pj_var_dump($data);
+
+				//pj_var_dump( json_encode($data));
 
 
 
 				$url = 'https://integrate.cario.com.au/api/Consignment/GetQuotes';
 
-				$auth_data = get_option('woo_cario_auth_data');
-				$auth_accesstoken = 'Bearer ' . $auth_data['accessToken'];
-				$auth_tenantid = $auth_data['tenantId'];
-				$auth_customerid = $auth_data['customerId'];
-				$auth_userid = $auth_data['userId'];
+	
+				$auth_accesstoken = 'Bearer ' .  $this->accessToken; 
+				$auth_tenantid = $this->tenantId;
+				$auth_customerid = $this->customerId;
 
 				$response = wp_remote_post( $url, array(
 					'method'      => 'POST',
@@ -390,29 +466,42 @@ function cario_shipping_method() {
 					'headers'     => [
 						'Content-Type' => 'application/json',
 						'Authorization' => $auth_accesstoken,
-						'CustomerId' => $auth_customerid,
-						'TenantId' => $auth_tenantid,
-						'userId' => $auth_userid,
+						'TenantId' => $auth_tenantid
 					],
 					'body'        => json_encode($data),
 					'cookies'     => array()
 					)
 				);
 
-				// pj_var_dump($response);
+				//pj_var_dump($response);
 				
 				if ( is_wp_error( $response ) ) {
 					$error_message = $response->get_error_message();
 					var_dump($error_message);
 				} else {
 					$results = json_decode($response['body'] , true );
+
+					$handling_charges = get_option( 'cario_price_rules' );
+
+					$handling_cost = '20';
+
+					foreach( $handling_charges as $handling_charge){
+						if( $weight >= $handling_charge['weight_start'] && $weight <= $handling_charge['weight_end'] ){
+							$handling_cost = $handling_charge['cost'];
+						}
+					}
+
 					if( $results){
 						foreach($results as $result){
+
+							$total_calculated = ( ( $handling_cost + $result['total'] ) + ( ( ( $handling_cost + $result['total'] ) / 100 ) * $this->uplift ) );
+
+
 
 							$rate = array(
 								'id' => $result['carrierCode'],
 								'label' => $result['carrierName'],
-								'cost' => $result['total'],
+								'cost' => $total_calculated,
 							);
 			
 							$this->add_rate( $rate );
@@ -421,6 +510,93 @@ function cario_shipping_method() {
 					}
 				}
 			}
+
+
+			public function cario_get_country_id( $country_code ) {
+
+				$url = 'https://integrate.cario.com.au/api/Location/GetCountryByCode/'. $country_code;
+
+
+				$auth_accesstoken = 'Bearer ' . $this->accessToken;
+				$auth_tenantid = $this->tenantId;
+				$auth_customerid = $this->customerId;
+
+				$response = wp_remote_get( $url, array(
+					'method'      => 'GET',
+					'timeout'     => 45,
+					'redirection' => 5,
+					'httpversion' => '1.0',
+					'blocking'    => true,
+					'headers'     => [
+						'Content-Type' => 'application/json',
+						'Authorization' => $auth_accesstoken,
+						'CustomerId' => $auth_customerid,
+						'TenantId' => $auth_tenantid,
+					],
+					'cookies'     => array()
+					)
+				);
+
+				
+				
+				if ( is_wp_error( $response ) ) {
+					$error_message = $response->get_error_message();
+					//var_dump($error_message);
+				} else {
+					$results = json_decode($response['body'] , true );
+				}
+
+				return $results;
+
+			}
+
+			public function cario_get_location_id( $country_id , $post_code , $city ) {
+
+				$url = 'https://integrate.cario.com.au/api/Location/FindByCountryId/'. $country_id . '/' . $post_code;
+
+				$location_id = '';
+
+				$auth_accesstoken = 'Bearer ' . $this->accessToken;
+				$auth_tenantid = $this->tenantId;
+				$auth_customerid = $this->customerId;
+
+				$response = wp_remote_get( $url, array(
+					'method'      => 'GET',
+					'timeout'     => 45,
+					'redirection' => 5,
+					'httpversion' => '1.0',
+					'blocking'    => true,
+					'headers'     => [
+						'Content-Type' => 'application/json',
+						'Authorization' => $auth_accesstoken,
+						'CustomerId' => $auth_customerid,
+						'TenantId' => $auth_tenantid
+					],
+					'cookies'     => array()
+					)
+				);
+
+				
+				
+				if ( is_wp_error( $response ) ) {
+					$error_message = $response->get_error_message();
+					//var_dump($error_message);
+				} else {
+					$results = json_decode($response['body'] , true );
+					$city_up = strtoupper($city);
+					$location_id = $results['0']['id'];
+					foreach($results as $result){
+						if (strpos($result['description'], $city_up) !== false) {
+							$location_id = $result['id'];
+						}
+					}
+				}
+
+				return $location_id;
+
+			}
+
+
 		}
 	}
 }
@@ -607,22 +783,6 @@ function cario_shipping_rules_callback(  ) {
 			do_settings_sections( 'carioShippingPage' );
 			submit_button();
 		?>
-
-		<hr/>
-
-		<?php $auth_data = get_option('woo_cario_auth_data');
-			echo '<table>';
-			foreach ( $auth_data as $key => $value ){
-				echo '<tr>';
-				echo '<td>'.$key.'</td>';
-				echo '<td><input type="text" readonly value="'.$value.'"/></td>';
-				echo '</tr>';
-			}
-			echo '</table>';
-
-		?>
-
-
 
 		</div>
 	</form>
