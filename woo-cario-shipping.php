@@ -14,94 +14,9 @@
  * Text Domain:       cario
  */
 
-/* 
- * Retrieve this value with:
- * $woocommerce_cario_shipping_options = get_option( 'woocommerce_cario_shipping_option_name' ); // Array of All Options
- * $usernameoremailaddress_0 = $woocommerce_cario_shipping_options['usernameoremailaddress_0']; // userNameOrEmailAddress
- * $password_1 = $woocommerce_cario_shipping_options['password_1']; // password
- * $tenantname_2 = $woocommerce_cario_shipping_options['tenantname_2']; // tenantName
- * $rememberclient_3 = $woocommerce_cario_shipping_options['rememberclient_3']; // rememberClient
- */
-
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
-
-
-
-/*
-
-// Scheduled Action Hook
-function woo_cario_authentication_generate( ) {
-
-	
-
-	$woocommerce_cario_shipping_options = get_option('woocommerce_cario_settings');
-	$apiUrl = $woocommerce_cario_shipping_options['apiUrl'];
-	$usernameoremailaddress = $woocommerce_cario_shipping_options['userNameOrEmailAddress'];
-	$password = $woocommerce_cario_shipping_options['password'];
-	$tenantname = $woocommerce_cario_shipping_options['tenantName'];
-	$rememberclient = true;
-
-	$url = $apiUrl . '/api/Authentication/Login';
-
-	$response = wp_remote_post( $url, array(
-		'method'      => 'POST',
-		'timeout'     => 45,
-		'redirection' => 5,
-		'httpversion' => '1.0',
-		'blocking'    => true,
-		'headers'     => [
-			'Content-Type' => 'application/json',
-		],
-		'body'        => json_encode(array(
-			'userNameOrEmailAddress' => $usernameoremailaddress,
-			'password' => $password,
-			'tenantName' => $tenantname,
-			'rememberClient' => $rememberclient
-		)),
-		'cookies'     => array()
-		)
-	);
-
-	
-
-	pj_var_dump($response);
-
-	 
-	if ( is_wp_error( $response ) ) {
-		$error_message = $response->get_error_message();
-	} else {
-		$data = json_decode($response['body'] , true );
-		update_option('woo_cario_auth_data', $data);
-	}
-
-}
-add_action( 'woo_cario_authentication_generate', 'woo_cario_authentication_generate' );
-
-// Schedule Cron Job Event
-function woo_cario_authentication() {
-	if ( ! wp_next_scheduled( 'woo_cario_authentication_generate' ) ) {
-		wp_schedule_event( current_time( 'timestamp' ), 'daily', 'woo_cario_authentication_generate' );
-	}
-}
-add_action( 'wp', 'woo_cario_authentication' );
-
-
-*/
-
-
-// Add Shortcode
-function fn_woo_cario_test() {
-
-	woo_cario_authentication_generate();
-
-}
-add_shortcode( 'woo_cario_test', 'fn_woo_cario_test' );
-
-
-
-
 
 
 if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
@@ -109,12 +24,6 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 function cario_shipping_method() {
 	if ( ! class_exists( 'Cario_Shipping_Method' ) ) {
 		class Cario_Shipping_Method extends WC_Shipping_Method {
-			/**
-			 * Constructor for your shipping class
-			 *
-			 * @access public
-			 * @return void
-			 */
 			public function __construct() {
 				$this->id                 = 'cario'; 
 				$this->method_title       = __( 'Cario Shipping', 'cario' );  
@@ -143,32 +52,15 @@ function cario_shipping_method() {
 				$this->storeState = isset( $this->settings['storeState'] ) ? $this->settings['storeState'] : __( '', 'cario' );
 				$this->storePostCode = isset( $this->settings['storePostCode'] ) ? $this->settings['storePostCode'] : __( '', 'cario' );
 				$this->storeCountry = isset( $this->settings['storeCountry'] ) ? $this->settings['storeCountry'] : __( '', 'cario' );
-
-
-
-
 			}
 
-			/**
-			 * Init your settings
-			 *
-			 * @access public
-			 * @return void
-			 */
 			function init() {
-				// Load the settings API
 				$this->init_form_fields(); 
 				$this->init_settings(); 
-
-				// Save settings in admin if you have any defined
 				add_action( 'woocommerce_update_options_shipping_' . $this->id, array( $this, 'process_admin_options' ) );
-				//add_action('woocommerce_update_options_shipping_' . $this->id, 'woo_cario_authentication_generate', 99);
 			}
 
-			/**
-			 * Define settings field for this shipping
-			 * @return void 
-			 */
+
 			function init_form_fields() { 
 
 				$symbol = get_woocommerce_currency();
@@ -311,13 +203,6 @@ function cario_shipping_method() {
 
 			}
 
-			/**
-			 * This function is used to calculate the shipping cost. Within this function we can check for weights, dimensions and other parameters.
-			 *
-			 * @access public
-			 * @param mixed $package
-			 * @return void
-			 */
 			public function calculate_shipping( $package = array() ) {
 				
 				$weight = 0;
@@ -368,10 +253,6 @@ function cario_shipping_method() {
 				$store_location_id = $this->cario_get_location_id($store_country_id, $store_postcode, $store_city);
 
 				$customerId = $this->customerId;
-
-				//pj_var_dump($store_location_id);
-
-				
 				
 				$destination = $package["destination"];
 				$destination_address = $destination['address_1'] . ' ' . $destination['address_2'];
@@ -386,16 +267,7 @@ function cario_shipping_method() {
 
 				$destination_location_id = $this->cario_get_location_id( $destination_country_id , $destination_postcode, $destination_city);
 
-
-				
-
 				$pickup_date =  date('Y-m-d', strtotime('+2 day'));
-
-				//pj_var_dump($cart_prod_id_m3);
-
-				//pj_var_dump($package['contents']);
-				 
-
 
 				$data = array (
 					'customerId' => intval($customerId),
@@ -444,11 +316,6 @@ function cario_shipping_method() {
 					),
 				);
 
-				//pj_var_dump($data);
-
-				//pj_var_dump( json_encode($data));
-
-
 
 				$url = 'https://integrate.cario.com.au/api/Consignment/GetQuotes';
 
@@ -473,7 +340,6 @@ function cario_shipping_method() {
 					)
 				);
 
-				//pj_var_dump($response);
 				
 				if ( is_wp_error( $response ) ) {
 					$error_message = $response->get_error_message();
@@ -515,7 +381,6 @@ function cario_shipping_method() {
 			public function cario_get_country_id( $country_code ) {
 
 				$url = 'https://integrate.cario.com.au/api/Location/GetCountryByCode/'. $country_code;
-
 
 				$auth_accesstoken = 'Bearer ' . $this->accessToken;
 				$auth_tenantid = $this->tenantId;
@@ -787,12 +652,4 @@ function cario_shipping_rules_callback(  ) {
 		</div>
 	</form>
 	<?php
-}
-
-function pj_var_dump($str){
-	if ( current_user_can( 'manage_options' ) ) {
-		echo '<pre>';
-		var_dump($str);
-		echo '</pre>';
-	}
 }
